@@ -10,8 +10,13 @@ class JobStatus(Enum):
     FINISHED = "finished"
     FAILED = "failed"
 
+class SDModel(Enum):
+    SDXL_1_0="SDXL 1.0"
+    SD_1_5 ="SD 1.5"
+
 class TrainingRequest(BaseModel):
     lora_name: str=""
+    sd_model: str=SDModel.SDXL_1_0.value
     repeats: int = 100
     learning_rate: float = 4e-7
     max_training_steps: conint(gt=0) = 10

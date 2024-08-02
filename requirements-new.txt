@@ -72,9 +72,9 @@ tensorboard-data-server==0.7.2
 tokenizers==0.15.2
 toml==0.10.2
 toolz==0.12.1
-torch==2.1.2+cu118
-torchmetrics==1.4.0.post0
-torchvision==0.16.2+cu118
+# torch==2.1.2+cu118
+# torchmetrics==1.4.0.post0
+# torchvision==0.16.2+cu118
 tqdm==4.66.4
 transformers==4.36.2
 triton==2.1.0
@@ -84,6 +84,6 @@ urllib3==1.26.13
 voluptuous==0.13.1
 wcwidth==0.2.13
 Werkzeug==3.0.3
-xformers==0.0.23.post1+cu118
+# xformers==0.0.23.post1+cu118
 yarl==1.9.4
 zipp==3.19.2

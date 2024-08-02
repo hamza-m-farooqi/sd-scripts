@@ -10,7 +10,7 @@ from datetime import datetime
 from decouple import config
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from request_queue import Job,TrainingRequest,TrainingConfig,JobStatus,TrainingResponse,job_queue
+from request_queue import Job,TrainingRequest,TrainingConfig,JobStatus,TrainingResponse,SDModel,job_queue
 from server_logging import logger
 from s3_utils import upload_media_to_s3,get_uploaded_media_from_s3
 
@@ -21,7 +21,10 @@ def background_training(job:Job):
     config:TrainingConfig=job.job_config
     project_deployment_path=server_settings.PROJECT_DEPLOYMENT_PATH
     # command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && python sdxl_train.py --config {toml_path}'"
-    command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 sdxl_train_network.py --config {toml_path}'"
+    if job.job_request.sd_model==SDModel.SDXL_1_0.value:
+        command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 sdxl_train_network.py --config {toml_path}'"
+    else:
+        command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 train_network.py --config {toml_path}'"
     print(command)
 
     try:

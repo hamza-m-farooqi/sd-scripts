@@ -9,7 +9,7 @@ from io import BytesIO
 from PIL import Image
 from flask import Flask, request, jsonify, send_file
 from decouple import config
-from request_queue import Job, TrainingRequest, TrainingConfig, JobQueue, job_queue
+from request_queue import Job, TrainingRequest, TrainingConfig, JobQueue,SDModel, job_queue
 from request_worker import viton_task_loop
 app = Flask(__name__)
 
@@ -44,6 +44,7 @@ def create_folders_and_save_images(files, lora_name, repeats):
 def train():
     training_request_defaults = TrainingRequest()
     lora_name = request.form["lora_name"]
+    sd_model = request.form.get("sd_model",training_request_defaults.sd_model.value)
     learning_rate = float(
         request.form.get("learning_rate", training_request_defaults.learning_rate)
     )
@@ -78,6 +79,8 @@ def train():
         network_alpha=network_alpha,
         webhook_url=webhook_url,
         example_prompts=example_prompts,
+        sd_model=sd_model
+        
     )
 
     base_path, images_path, images_save_path, models_path, logs_path = (
@@ -104,6 +107,7 @@ def train():
         output_name=lora_name,
         logging_dir=logs_path,
         sample_prompts=sample_prompts_file_path,
+        pretrained_model_name_or_path="runwayml/stable-diffusion-v1-5" if training_request.sd_model==SDModel.SD_1_5.value else server_settings.PRETRAINED_SDXL_MODEL_PATH,
     )
 
     toml_path = os.path.join(models_path, "config.toml")
@@ -143,4 +147,4 @@ def training_get():
 Thread(target=viton_task_loop).start()
 if __name__ == "__main__":
     print("Going to run flask server")
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=7000)
