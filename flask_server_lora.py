@@ -44,15 +44,16 @@ def create_folders_and_save_images(files, lora_name, repeats):
 def train():
     training_request_defaults = TrainingRequest()
     lora_name = request.form["lora_name"]
-    sd_model = request.form.get("sd_model",training_request_defaults.sd_model.value)
+    sd_model = request.form.get("sd_model",training_request_defaults.sd_model)
     learning_rate = float(
         request.form.get("learning_rate", training_request_defaults.learning_rate)
     )
-    max_training_steps = int(
-        request.form.get(
+    max_train_epochs = request.form.get(
+            "max_train_epochs", training_request_defaults.max_train_epochs
+        )
+    max_training_steps = request.form.get(
             "max_training_steps", training_request_defaults.max_training_steps
         )
-    )
     network_dim = int(
         request.form.get("network_dim", training_request_defaults.network_dim)
     )
@@ -73,13 +74,15 @@ def train():
 
     training_request = TrainingRequest(
         lora_name=lora_name,
+        max_train_epochs=max_train_epochs,
         learning_rate=learning_rate,
         max_training_steps=max_training_steps,
         network_dim=network_dim,
         network_alpha=network_alpha,
         webhook_url=webhook_url,
         example_prompts=example_prompts,
-        sd_model=sd_model
+        sd_model=sd_model,
+        repeats=repeats
         
     )
 
@@ -98,8 +101,10 @@ def train():
     #         f.write("\n".join(example_prompts))
 
     config = TrainingConfig(
+
         learning_rate=training_request.learning_rate,
         max_train_steps=training_request.max_training_steps,
+        max_train_epochs=training_request.max_train_epochs,
         network_dim=training_request.network_dim,
         network_alpha=training_request.network_alpha,
         train_data_dir=images_path,

@@ -16,14 +16,16 @@ class SDModel(Enum):
 
 class TrainingRequest(BaseModel):
     lora_name: str=""
-    sd_model: str=SDModel.SDXL_1_0.value
-    repeats: int = 100
-    learning_rate: float = 4e-7
-    max_training_steps: conint(gt=0) = 10
+    sd_model: str=SDModel.SD_1_5.value
+    repeats: int = 40
+    learning_rate: float = 1e-4
+    max_training_steps: int|None = None
+    max_train_epochs : int | None = 20
     network_dim: conint(gt=0) = 128
-    network_alpha: conint(gt=0) = 64
+    network_alpha: conint(gt=0) = 128
     example_prompts:list=None
     webhook_url:str = None
+    
 
 class TrainingResponse(BaseModel):
     total_epochs : int = 0
@@ -41,11 +43,12 @@ class TrainingConfig(BaseModel):
     clip_skip: int = 1
     dynamo_backend: str = "no"
     enable_bucket: bool = True
-    epoch: int = 1
-    gradient_accumulation_steps: int = 6
+    epoch: int = 15
+    max_train_epochs : int = 20
+    gradient_accumulation_steps: int = 1
     huber_c: float = 0.1
     huber_schedule: str = "snr"
-    learning_rate: float = 4e-7
+    learning_rate: float = 1e-4
     logging_dir: str = ""
     loss_type: str = "l2"
     lr_scheduler: str = "constant_with_warmup"
@@ -57,12 +60,12 @@ class TrainingConfig(BaseModel):
     max_data_loader_n_workers: int = 0
     max_grad_norm: int = 1
     max_timestep: int = 1000
-    max_token_length: int = 75
-    max_train_steps: int = 1600
+    max_token_length: int = 200
+    max_train_steps: int|None = 3500
     min_bucket_reso: int = 256
     mixed_precision: str = "fp16"
     multires_noise_discount: float = 0.3
-    network_alpha: int = 64
+    network_alpha: int = 128
     network_args: list = []
     network_dim: int = 128
     network_module: str = "networks.lora"
@@ -72,7 +75,8 @@ class TrainingConfig(BaseModel):
     optimizer_type: str = "AdamW8bit"
     output_dir: str = ""
     output_name: str = "last"
-    pretrained_model_name_or_path: str = server_settings.PRETRAINED_SDXL_MODEL_PATH
+    pretrained_model_name_or_path: str = "stabilityai/stable-diffusion-xl-base-1.0"
+    # pretrained_model_name_or_path: str = server_settings.PRETRAINED_SDXL_MODEL_PATH
     # pretrained_model_name_or_path: str = "runwayml/stable-diffusion-v1-5"
     prior_loss_weight: int = 1
     resolution: str = "1024,1024"
@@ -82,8 +86,8 @@ class TrainingConfig(BaseModel):
     save_every_n_epochs: int = 1
     save_model_as: str = "safetensors"
     save_precision: str = "bf16"
-    text_encoder_lr: float = 4e-7
-    train_batch_size: int = 1
+    text_encoder_lr: float = 1e-4
+    train_batch_size: int = 2
     train_data_dir: str = ""
     unet_lr: float = 0.0001
     xformers: bool = True
