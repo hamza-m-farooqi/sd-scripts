@@ -3,17 +3,17 @@ import re
 import select
 import shutil
 import subprocess
-import server_settings
+from server import server_settings
 import requests
 from threading import Thread
 from datetime import datetime
 from decouple import config
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from request_queue import Job,TrainingRequest,TrainingConfig,JobStatus,TrainingResponse,SDModel,job_queue
-from server_logging import logger
-from s3_utils import upload_media_to_s3,get_uploaded_media_from_s3
-
+from server.request_queue import Job,TrainingRequest,TrainingConfig,JobStatus,TrainingResponse,SDModel,job_queue
+from server.server_logging import logger
+from server.s3_utils import upload_media_to_s3,get_uploaded_media_from_s3
+from server.response_processor import process_response
 
 
 def background_training(job:Job):
@@ -37,6 +37,8 @@ def background_training(job:Job):
         )
 
         # Use select to read from stdout and stderr without blocking
+        logs_count=0
+        safetensors_files = set()
         while True:
             reads = [process.stdout.fileno(), process.stderr.fileno()]
             ret = select.select(reads, [], [])
@@ -47,22 +49,28 @@ def background_training(job:Job):
                         output = read.strip()
                         print(output)
                         percentage=0
-                        if f"/{config.max_train_steps}"  in output:
+                        if f"/{job.job_request.total_steps}"  in output:
                             percentage_value = get_progress_percentage(output)
                             percentage = percentage_value if percentage_value else 0
+                            logs_count+=1
                         job.job_progress = percentage
                         process_logs(job,output)
+                        if logs_count%20==0:
+                            process_response(job,safetensors_files)
                 if fd == process.stderr.fileno():
                     read = process.stderr.readline()
                     if read:
                         output = read.strip()
                         print(output)
                         percentage=0
-                        if f"/{config.max_train_steps}" in output:
+                        if f"/{job.job_request.total_steps}" in output:
                             percentage_value = get_progress_percentage(output)
                             percentage = percentage_value if percentage_value else 0
+                            logs_count+=1
                         job.job_progress = percentage
                         process_logs(job,output)
+                        if logs_count%20==0:
+                            process_response(job,safetensors_files)
             if process.poll() is not None:
                 break
 
@@ -105,26 +113,12 @@ def background_training(job:Job):
 def process_logs(job:Job,log):
     total_epochs = get_total_epochs(log)
     if total_epochs:
-        job.job_epochs=total_epochs
+        job.job_epochs=total_epochs   
 
-    current_epoch = get_current_epoch(log)
-    if current_epoch:
-        epoch_response=TrainingResponse(total_epochs=job.job_epochs,current_epoch_number=current_epoch)
-        job.job_results.append(epoch_response)
-    saved_checkout_path = get_checkpoint_path(log)
-    if saved_checkout_path:
-        lora_file_name=os.path.basename(saved_checkout_path)
-        epoch_model_s3_path=f"{job.job_s3_folder}{lora_file_name}"
-        job.job_results[-1].epoch_model_s3_path=epoch_model_s3_path
-        # job.job_results[-1].epoch_model_s3_url=get_uploaded_media_from_s3(epoch_model_s3_path)
-        Thread(target=upload_media_to_s3,args=(saved_checkout_path,epoch_model_s3_path)).start()
-        Thread(target=send_response,args=(job,)).start()
-        
 def get_progress_percentage(output_line):
     # Regex pattern to find the diffusion process progress
     pattern = re.compile(r'(\d+)/(\d+)\s+\[')
     match = pattern.search(output_line)
-    print(match)
     if match:
         current, total = map(int, match.groups())
         percentage = (current / total) * 100
@@ -140,21 +134,7 @@ def get_total_epochs(log):
     else:
         return None
 
-def get_current_epoch(log):
-    pattern = r"epoch\s*(\d+)/\d+"
-    match = re.search(pattern, log, re.IGNORECASE)
-    if match:
-        return int(match.group(1))
-    else:
-        return None
-    
-def get_checkpoint_path(log):
-    pattern = r"saving checkpoint:\s*(\/[^\s]+)"
-    match = re.search(pattern, log, re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    else:
-        None
+
 
 def generate_captions(images_path, lora_name):
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -178,9 +158,5 @@ def process_request(job:Job):
     generate_captions(images_save_path, job.job_request.lora_name)
     background_training(job)
 
-def send_response(job:Job):
-    if not job.job_request.webhook_url:
-        return
-    requests.post(job.job_request.webhook_url, json=job.job_results[-1].dict())
 
 

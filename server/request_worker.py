@@ -1,6 +1,6 @@
 import time
-from request_queue import job_queue
-from request_processor import process_request
+from server.request_queue import job_queue
+from server.request_processor import process_request
 def viton_task_loop():
     print("worker running")
     while True:

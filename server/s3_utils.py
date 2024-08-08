@@ -1,6 +1,6 @@
 import os
 import boto3
-import server_settings as settings
+import server.server_settings as settings
 from botocore.exceptions import NoCredentialsError
 
 
@@ -15,6 +15,7 @@ def s3_client_info():
 
 
 def upload_media_to_s3(file_path,file_name):
+    print("Going to uploaded to S3")
     s3_client = s3_client_info()
     bucket_name = settings.AWS_BUCKET_NAME
     try:

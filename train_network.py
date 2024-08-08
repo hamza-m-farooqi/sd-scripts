@@ -771,6 +771,8 @@ class NetworkTrainer:
             ckpt_file = os.path.join(args.output_dir, ckpt_name)
 
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
+            # for i in range(5):
+            #     print(f"epoch 1/{num_train_epochs}")
             metadata["ss_training_finished_at"] = str(time.time())
             metadata["ss_steps"] = str(steps)
             metadata["ss_epoch"] = str(epoch_no)

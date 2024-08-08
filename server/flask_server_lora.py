@@ -3,14 +3,14 @@ from threading import Thread
 import uuid
 import toml
 import json
-import server_settings
+from server import server_settings
 from typing import List
 from io import BytesIO
 from PIL import Image
 from flask import Flask, request, jsonify, send_file
 from decouple import config
-from request_queue import Job, TrainingRequest, TrainingConfig, JobQueue,SDModel, job_queue
-from request_worker import viton_task_loop
+from server.request_queue import Job, TrainingRequest, TrainingConfig, JobQueue,SDModel, job_queue
+from server.request_worker import viton_task_loop
 app = Flask(__name__)
 
 
@@ -114,6 +114,14 @@ def train():
         sample_prompts=sample_prompts_file_path,
         pretrained_model_name_or_path="runwayml/stable-diffusion-v1-5" if training_request.sd_model==SDModel.SD_1_5.value else server_settings.PRETRAINED_SDXL_MODEL_PATH,
     )
+    
+    if training_request.sd_model==SDModel.SDXL_1_0.value:
+        config.train_batch_size=1
+    
+    total_images=(len(files)*training_request.repeats)
+    total_images=total_images/config.train_batch_size
+    total_training_steps = total_images*training_request.max_train_epochs
+    training_request.total_steps=int(total_training_steps)
 
     toml_path = os.path.join(models_path, "config.toml")
     with open(toml_path, "w") as toml_file:
