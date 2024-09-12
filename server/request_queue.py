@@ -100,14 +100,14 @@ class TrainingConfig(BaseModel):
     lowram:bool=True
 
 class Job(BaseModel):
-    job_id:str = str(uuid.uuid4())
+    job_id:str = None
     job_request:TrainingRequest = None
     job_config:TrainingConfig = None
     job_number:int = None  # This will be set when added to the queue
     job_progress:int = 0
     job_status:str = JobStatus.WAITING.value  # Initial status
     job_epochs:int = 0
-    job_s3_folder:str=f"loras/{datetime.now().strftime('%Y-%m-%d')}/{str(uuid.uuid4())}/"
+    job_s3_folder:str=f"loras/{datetime.now().strftime('%Y-%m-%d')}/{job_id}/"
     job_results:List[TrainingResponse] = []
     error_message:str = None
 

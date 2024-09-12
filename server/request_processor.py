@@ -1,30 +1,22 @@
 import os
 import re
 import select
-import shutil
 import subprocess
-from server import server_settings
-import requests
-from threading import Thread
-from datetime import datetime
-from decouple import config
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from server.request_queue import Job,TrainingRequest,TrainingConfig,JobStatus,TrainingResponse,SDModel,job_queue
+from server import server_settings
+from server.request_queue import Job,TrainingConfig,JobStatus,SDModel,job_queue
 from server.server_logging import logger
-from server.s3_utils import upload_media_to_s3,get_uploaded_media_from_s3
 from server.response_processor import process_response
 
 
 def background_training(job:Job):
     toml_path = os.path.join(job.job_config.output_dir, "config.toml")
     config:TrainingConfig=job.job_config
-    project_deployment_path=server_settings.PROJECT_DEPLOYMENT_PATH
-    # command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && python sdxl_train.py --config {toml_path}'"
     if job.job_request.sd_model==SDModel.SDXL_1_0.value:
-        command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 sdxl_train_network.py --config {toml_path}'"
+        command = f"bash -c 'cd {server_settings.PROJECT_DEPLOYMENT_PATH} && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 sdxl_train_network.py --config {toml_path}'"
     else:
-        command = f"bash -c 'source {project_deployment_path}/venv/bin/activate && cd {project_deployment_path}/  && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 train_network.py --config {toml_path}'"
+        command = f"bash -c 'cd {server_settings.PROJECT_DEPLOYMENT_PATH} && accelerate launch --dynamo_backend no --dynamo_mode default --mixed_precision fp16 --num_processes 1 --num_machines 1 --num_cpu_threads_per_process 2 train_network.py --config {toml_path}'"
     print(command)
 
     try:
@@ -56,6 +48,7 @@ def background_training(job:Job):
                         job.job_progress = percentage
                         process_logs(job,output)
                         if logs_count%20==0:
+                            print(output)
                             process_response(job,safetensors_files)
                 if fd == process.stderr.fileno():
                     read = process.stderr.readline()
@@ -82,20 +75,9 @@ def background_training(job:Job):
         trained_model_path=os.path.join(config.output_dir,f"{config.output_name}.{config.save_model_as}")
         if not os.path.exists(trained_model_path):
             print("Trained Model Not Found!")
-        # MOVE TRAINED LORA MODEL FROM trained_model_path to TRAINED_LORA_FINAL_DESTINATION
-        # shutil.move(trained_model_path, server_settings.TRAINED_LORA_FINAL_DESTINATION)
-        print("Trained Lora Model Moved to: ", server_settings.TRAINED_LORA_FINAL_DESTINATION)
         job.job_progress = 100
         job.job_status = JobStatus.FINISHED.value
-
-
-        # job.job_status = "finished"
-        # job.job_result = os.path.join(
-        #     settings.STATIC_URL,
-        #     "viton",
-        #     "outputs",
-        #     os.path.basename(job_params.output_path),
-        # )
+        process_response(job,safetensors_files)
 
     except subprocess.CalledProcessError as e:
         print(e)
@@ -106,9 +88,6 @@ def background_training(job:Job):
         print(e)
         job.job_status=JobStatus.FAILED.value
         job.error_message = str(e)
-    finally:
-        job_queue.history.append(job)
-        job_queue.pending.remove(job)
 
 def process_logs(job:Job,log):
     total_epochs = get_total_epochs(log)

@@ -1,0 +1,4 @@
+gcloud auth login
+gcloud auth configure-docker us-central1-docker.pkg.dev
+docker tag image-name tag-name
+docker push tag-name
