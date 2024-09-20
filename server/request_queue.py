@@ -26,6 +26,32 @@ class TrainingRequest(BaseModel):
     example_prompts:list=None
     webhook_url:str|None = None
     total_steps:int = 1000
+
+class TrainingRequest_SD15(BaseModel):
+    lora_name: str=""
+    sd_model: str=SDModel.SD_1_5.value
+    repeats: int = 10
+    learning_rate: float = 5e-4
+    max_training_steps: int|None = None
+    max_train_epochs : int | None = 10
+    network_dim: conint(gt=0) = 16
+    network_alpha: conint(gt=0) = 8
+    example_prompts:list=None
+    webhook_url:str|None = None
+    total_steps:int = 1000
+
+class TrainingRequest_SDXL(BaseModel):
+    lora_name: str=""
+    sd_model: str=SDModel.SDXL_1_0.value
+    repeats: int = 40
+    learning_rate: float = 1e-4
+    max_training_steps: int|None = None
+    max_train_epochs : int | None = 10
+    network_dim: conint(gt=0) = 128
+    network_alpha: conint(gt=0) = 1
+    example_prompts:list=None
+    webhook_url:str|None = None
+    total_steps:int = 1000
     
 
 class TrainingResponse(BaseModel):

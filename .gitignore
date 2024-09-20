@@ -8,3 +8,5 @@ build
 wandb
 dataset
 models
+.env
+app.log

@@ -7,6 +7,8 @@ import server.server_settings as server_settings
 from server.request_queue import (
     Job,
     TrainingRequest,
+    TrainingRequest_SD15,
+    TrainingRequest_SDXL,
     TrainingConfig,
     SDModel,
 )
@@ -18,7 +20,10 @@ from server.request_processor import background_training
 
 def train(training_request_dict: dict):
     try:
-        training_request_defaults = TrainingRequest()
+        if training_request_dict.get("base_model") == SDModel.SDXL_1_0.value:
+            training_request_defaults = TrainingRequest_SD15()
+        else:
+            training_request_defaults = TrainingRequest_SDXL()
         job_id = training_request_dict.get("job_id")
         lora_name = training_request_dict.get("lora_name")
         sd_model = training_request_dict.get("base_model", training_request_defaults.sd_model)
@@ -62,7 +67,6 @@ def train(training_request_dict: dict):
             return webhook_response(webhook_url, False, 400, "No lora name provided!")
         if len(images_urls) == 0:
             return webhook_response(webhook_url, False, 400, "No image urls provided!")
-
         training_request = TrainingRequest(
             lora_name=lora_name,
             max_train_epochs=max_train_epochs,
@@ -75,7 +79,6 @@ def train(training_request_dict: dict):
             sd_model=sd_model,
             repeats=repeats,
         )
-
         base_path, images_path, images_save_path, models_path, logs_path = (
             create_folders_and_save_images(images_urls, training_request.lora_name, repeats)
         )
@@ -109,8 +112,7 @@ def train(training_request_dict: dict):
         )
 
         if training_request.sd_model == SDModel.SDXL_1_0.value:
-            config.train_batch_size = 1
-
+            config.train_batch_size = 2
         total_images = len(images_urls) * training_request.repeats
         total_images = total_images / config.train_batch_size
         total_training_steps = total_images * training_request.max_train_epochs
@@ -152,20 +154,21 @@ if __name__ == "__main__":
     # Call the train function with the parsed dictionary
     train(training_request_dict)
 # training_request_dict={
-#     "lora_name": "Irfan",
-#     "sd_model": "SD 1.5",
-#     "webhook_url":"https://webhook-test.com/0c2d7027e24b5a9cbae52cd051b560b4",
+#     "lora_name": "Irfan_New",
+#     "sd_model": "SDXL 1.0",
+#     "webhook_url":"https://webhook-test.com/f447d103cb690b7a656a61306cec7b23",
 #     "images_urls":[
-#         "https://i.ibb.co/gJnQY2P/5.jpg",
-#         "https://i.ibb.co/pRg3FXj/8.jpg",
-#         "https://i.ibb.co/ZYXfQjR/12.jpg",
-#         "https://i.ibb.co/7yzxRHd/13.jpg",
-#         "https://i.ibb.co/R6MqCcV/14.jpg",
-#         "https://i.ibb.co/prQwJ55/22.jpg",
-#         "https://i.ibb.co/TTQfVSY/25.jpg",
-#         "https://i.ibb.co/QFDsytx/30.jpg",
-#         "https://i.ibb.co/hRxDx5z/34.jpg",
-#         "https://i.ibb.co/mCGnTkX/48.jpg",
-#     ]
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/63~2_NNNLJLT.png",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG_2259~3_316EIoA.jpg",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG_3002_0cpbQyN.HEIC",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG_3003_amZKwYh.HEIC",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG_5615~2_Vy45QWe.jpg",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG_6931_lugTWL6.jpg",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG_6932_qgKZjWe.jpg",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/IMG20240126113742_9LPQYOx.jpg",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/PXL_20240716_162039748.MP_kkAKpte.jpg",
+#             "https://boothybooth.s3.amazonaws.com/lora_images/Savaiz/PXL_20240716_163147619.NIGHT_FBwvJSG.jpg"
+#     ],
+#     "job_id":"1234"
 #  }
 # train(training_request_dict)
