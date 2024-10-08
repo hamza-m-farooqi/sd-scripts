@@ -1,4 +1,15 @@
 gcloud auth login
+gcloud set project project-id
 gcloud auth configure-docker us-central1-docker.pkg.dev
-docker tag image-name tag-name
+docker build -t sd-lora-training .
+docker tag sd-lora-training us-central1-docker.pkg.dev/repo-name/image-name:tag
 docker push tag-name
+
+
+
+
+
+
+
+
+

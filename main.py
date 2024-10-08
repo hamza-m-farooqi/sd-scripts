@@ -20,7 +20,7 @@ from server.request_processor import background_training
 
 def train(training_request_dict: dict):
     try:
-        if training_request_dict.get("base_model") == SDModel.SDXL_1_0.value:
+        if training_request_dict.get("base_model") == SDModel.SD_1_5.value:
             training_request_defaults = TrainingRequest_SD15()
         else:
             training_request_defaults = TrainingRequest_SDXL()
@@ -112,7 +112,13 @@ def train(training_request_dict: dict):
         )
 
         if training_request.sd_model == SDModel.SDXL_1_0.value:
-            config.train_batch_size = 2
+            config.train_batch_size = 1
+            config.lr_scheduler = "cosine"
+            config.text_encoder_lr = 5e-5
+            config.unet_lr = 1e-4
+            config.lr_warmup_steps = 0
+            config.bucket_no_upscale = False
+            
         total_images = len(images_urls) * training_request.repeats
         total_images = total_images / config.train_batch_size
         total_training_steps = total_images * training_request.max_train_epochs

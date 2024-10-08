@@ -1,6 +1,6 @@
 import os
 import boto3
-import server.server_settings as settings
+import server_settings as settings
 
 def upload_to_s3(save_path, object_path):
     """
